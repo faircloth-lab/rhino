@@ -15,6 +15,7 @@ Created on 23 June 2014 17:53 PDT (-0700)
 import os
 import sys
 import glob
+import shutil
 import argparse
 #import pdb
 
@@ -25,12 +26,25 @@ class FullPaths(argparse.Action):
         setattr(namespace, self.dest, os.path.abspath(os.path.expanduser(values)))
 
 
-def to_full_paths(string):
-    return os.path.abspath(os.path.expanduser(string))
+class CreateDir(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        # get the full path
+        d = os.path.abspath(os.path.expanduser(values))
+        # check to see if directory exists
+        if os.path.exists(d):
+            answer = raw_input("[WARNING] Output directory exists, REMOVE [Y/n]? ")
+            if answer == "Y":
+                shutil.rmtree(d)
+            else:
+                print "[QUIT]"
+                sys.exit()
+        # create the new directory
+        os.makedirs(d)
+        # return the full path
+        setattr(namespace, self.dest, d)
 
 
 def is_dir(dirname):
-    """Checks if a path is an actual directory"""
     if not os.path.isdir(dirname):
         msg = "{0} is not a directory".format(dirname)
         raise argparse.ArgumentTypeError(msg)
@@ -38,10 +52,18 @@ def is_dir(dirname):
         return dirname
 
 
+def is_file(filename):
+    if not os.path.isfile:
+        msg = "{0} is not a file".format(filename)
+        raise argparse.ArgumentTypeError(msg)
+    else:
+        return filename
+
+
 def mkdir(path):
     try:
         os.mkdir(path)
-    except OSError as e:
+    except OSError:
         pass
 
 
