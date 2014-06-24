@@ -1,28 +1,33 @@
-"""
-File: common.py
-Author: Brant Faircloth
-
-Created by Brant Faircloth on 22 October 2011 18:10 PDT (-0700)
-Copyright (c) 2011 Brant C. Faircloth. All rights reserved.
-
-Description: functions common to picme and helpers
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """
+(c) 2014 Brant Faircloth || http://faircloth-lab.org/
+All rights reserved.
+
+This code is distributed under a 3-clause BSD license. Please see
+LICENSE.txt for more information.
+
+Created on 23 June 2014 17:53 PDT (-0700)
+"""
+
 
 import os
 import sys
 import glob
 import argparse
-
 #import pdb
+
 
 class FullPaths(argparse.Action):
     """Expand user- and relative-paths"""
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, os.path.abspath(os.path.expanduser(values)))
 
+
 def to_full_paths(string):
     return os.path.abspath(os.path.expanduser(string))
+
 
 def is_dir(dirname):
     """Checks if a path is an actual directory"""
@@ -32,11 +37,13 @@ def is_dir(dirname):
     else:
         return dirname
 
+
 def mkdir(path):
     try:
         os.mkdir(path)
     except OSError as e:
         pass
+
 
 def create_unique_dir(path, limit=100):
     """Attempts to create a directory `path`. Returns the name of the
@@ -63,12 +70,14 @@ def create_unique_dir(path, limit=100):
         msg = "could not uniquely create directory {0}: limit `{1}` reached"
         raise Exception(msg.format(original, limit))
 
+
 def get_output_type(name):
     """get extension from filename"""
     ext = os.path.splitext(name)[1].lstrip('.').lower()
     assert ext in ['pdf','png','tiff','jpeg', 'jpg'], "Filetype must be " + \
         "one of pdf, png, tiff, or jpeg"
     return ext
+
 
 def get_list_from_ints(string, name = 'time'):
     """Convert times input as string to a list"""
@@ -79,6 +88,7 @@ def get_list_from_ints(string, name = 'time'):
         raise argparse.ArgumentTypeError(msg.format(name, e))
     return times
 
+
 def get_strings_from_items(string, name = 'locus'):
     """Convert times input as string to a list"""
     try:
@@ -88,6 +98,7 @@ def get_strings_from_items(string, name = 'locus'):
         raise argparse.ArgumentTypeError(msg.format(name, e))
     return times
 
+
 def get_list_from_ranges(string):
     """Convert ranges entered as string to nested list"""
     try:
@@ -96,6 +107,7 @@ def get_list_from_ranges(string):
         msg = "Cannot convert spans to a list of integers: {0}"
         raise argparse.ArgumentTypeError(msg.format(e))
     return ranges
+
 
 def get_files(d, extension):
     if ',' in extension:
