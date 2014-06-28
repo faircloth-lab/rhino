@@ -11,22 +11,78 @@ LICENSE.txt for more information.
 Created on 23 June 2014 17:37 PDT (-0700)
 """
 
+import tempfile
+
+import os
+from rhino import io
 from rhino import core
+from rhino import hyphy
+from rhino import parsimonator
 from rhino.log import setup_logging
+
+import pdb
+
+
+def tree_worker(work):
+    args, tmpdir, aln = work
+    if args.tree_method == "parsimony":
+        tree = parsimonator.get_parsimony_trees(tmpdir, aln)
+        corrected_tree, correction = core.correct_branch_lengths(
+            tree,
+            "newick",
+            tmpdir
+        )
+    return aln, corrected_tree, correction
 
 
 def main(args):
     # print message
-    print welcome_message()
+    #print welcome_message()
     # setup logging
     log, my_name = setup_logging(args)
     log.info("Getting alignments")
-    # get arguments
-    args = get_args()
-    # make output dir
-    args.output = tapir.create_unique_dir(args.output)
+    # get aligment info
+    alignments = io.get_alignment_files(args.alignments, args.input_format)
+    # setup mp object as standin for map()
+    if args.cores > 1:
+        from multiprocessing import Pool, cpu_count
+        pool = Pool(args.cores)
+        mp = pool.map
+    else:
+        mp = map
+    # create a base tmp dir to hold all files
+    tmp_base = tempfile.mkdtemp()
+    # create a temp dir to hold tree results
+    tmp_tree = os.path.join(tmp_base, "trees")
+    os.mkdir(tmp_tree)
+    if args.tree_file:
+        log.info("Correcting input tree")
+        corrected_tree, correction = core.correct_branch_lengths(
+            args.tree_file,
+            "newick",
+            tmp_tree
+        )
+        trees = [(aln, corrected_tree, correction) for aln in alignments]
+    # infer a tree
+    elif args.tree_method == 'parsimony':
+        log.info("Generating parsimony tree(s)")
+        # package the data
+        work1 = [(args, tmp_tree, aln) for aln in alignments]
+        trees = mp(tree_worker, work1)
+    # create a temp dir to hold site rate results
+    tmp_rates = os.path.join(tmp_base, "rates")
+    os.mkdir(tmp_rates)
+    # get hyphy rate template file
+    hyphy_template = io.get_hyphy_conf()
+    # package that data
+    work2 = [(args, hyphy_template, tmp_rates, tree_data) for tree_data in trees]
+    rates = mp(hyphy.rate_worker, work2)
+
+    '''
+    elif args.tree_file:
+        pass
     # correct branch lengths
-    tree_depth, correction, tree = tapir.correct_branch_lengths(args.tree, args.tree_format, d = args.output)
+
     # generate a vector of times given start and stops
     time_vector = tapir.get_time(0, int(tree_depth))
     params = []
@@ -68,6 +124,7 @@ def main(args):
     c.close()
     conn.close()
 
+    '''
 
     # ----------------------
     # end

@@ -7,11 +7,7 @@ import numpy
 import dendropy
 from collections import defaultdict
 
-from pkg_resources import resource_filename
-
-
-def get_hyphy_conf():
-    return resource_filename(__name__, 'data/models_and_rates.bf')
+import pdb
 
 
 def parse_site_rates(rate_file, correction = 1, test = False, count = 0):
@@ -37,7 +33,7 @@ def parse_site_rates(rate_file, correction = 1, test = False, count = 0):
     return corrected
 
 
-def correct_branch_lengths(tree_file, format, d = ""):
+def correct_branch_lengths(tree_file, format, output_dir):
     """Scale branch lengths to values shorter than 100"""
     tree = dendropy.Tree.get_from_path(tree_file, format)
     depth = tree.seed_node.distance_from_tip()
@@ -50,9 +46,11 @@ def correct_branch_lengths(tree_file, format, d = ""):
     for edge in tree.preorder_edge_iter():
         if edge.length:
             edge.length /= correction_factor
-    pth = os.path.join(d, 'Tree_{0}_{1}.newick'.format(correction_factor, depth))
+    pth = os.path.join(output_dir, '{0}.corrected.newick'.format(
+        os.path.basename(tree_file)
+        ))
     tree.write_to_path(pth, 'newick')
-    return depth, correction_factor, pth
+    return pth, correction_factor
 
 
 def get_net_pi_for_periods(pi, times):

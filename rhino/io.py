@@ -17,7 +17,13 @@ import sys
 import glob
 import shutil
 import argparse
-#import pdb
+from pkg_resources import resource_filename
+
+from Bio import AlignIO
+from Bio.Alphabet import IUPAC, Gapped
+
+
+import pdb
 
 
 class FullPaths(argparse.Action):
@@ -93,12 +99,8 @@ def create_unique_dir(path, limit=100):
         raise Exception(msg.format(original, limit))
 
 
-def get_output_type(name):
-    """get extension from filename"""
-    ext = os.path.splitext(name)[1].lstrip('.').lower()
-    assert ext in ['pdf','png','tiff','jpeg', 'jpg'], "Filetype must be " + \
-        "one of pdf, png, tiff, or jpeg"
-    return ext
+def get_hyphy_conf():
+    return resource_filename(__name__, 'data/models_and_rates.bf')
 
 
 def get_list_from_ints(string, name = 'time'):
@@ -131,16 +133,36 @@ def get_list_from_ranges(string):
     return ranges
 
 
-def get_files(d, extension):
-    if ',' in extension:
-        extension = extension.strip(' ').split(',')
-    else:
-        extension = [extension]
+def get_alignment_files(input_dir, input_format):
+    extensions = get_file_extensions(input_format)
     files = []
-    for e in extension:
-        files.extend(glob.glob(os.path.join(d, e)))
-    if files == []:
-        msg = "There appear to be no files of {0} type in {1}"
-        raise IOError(msg.format(extension, d))
-    else:
-        return files
+    for ext in extensions:
+        files.extend(glob.glob(os.path.join(os.path.expanduser(input_dir), '*{}*'.format(ext))))
+    # ensure we collapse duplicate filenames
+    return list(set(files))
+
+
+def get_file_extensions(ftype):
+    ext = {
+        'fasta': ('.fasta', '.fsa', '.aln', '.fa'),
+        'nexus': ('.nexus', '.nex'),
+        'phylip': ('.phylip', '.phy'),
+        'phylip-relaxed': ('.phylip', '.phy'),
+        'clustal': ('.clustal', '.clw'),
+        'emboss': ('.emboss',),
+        'stockholm': ('.stockholm',)
+    }
+    return ext[ftype]
+
+
+def convert_alignment(aln, format, outdir, out_format):
+    outfile_name = "{}.{}".format(
+        os.path.splitext(os.path.basename(aln))[0],
+        out_format
+    )
+    outfile = os.path.join(outdir, outfile_name)
+    with open(outfile, "w") as outf:
+        with open(aln, "rU") as infile:
+            alignment = AlignIO.parse(infile, format, alphabet=Gapped(IUPAC.ExtendedIUPACDNA()))
+            AlignIO.write(alignment, outf, out_format)
+    return outfile
